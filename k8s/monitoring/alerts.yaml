@@ -1,0 +1,38 @@
+apiVersion: monitoring.coreos.com/v1
+kind: PrometheusRule
+metadata:
+  name: payment-gateway
+spec:
+  groups:
+    - name: payment-gateway
+      rules:
+        - alert: OutboxBacklog
+          expr: max(pgs_outbox_pending) > 50
+          for: 5m
+          labels:
+            severity: warning
+          annotations:
+            summary: Payment events are not reaching Kafka
+            description: "{{ $value }} outbox events have been waiting for 5 minutes. Check Kafka and the payment-service relay."
+        - alert: HighDeclineRate
+          expr: |
+            sum(rate(pgs_payments_authorizations_total{outcome="declined"}[10m]))
+              / sum(rate(pgs_payments_authorizations_total[10m])) > 0.3
+          for: 10m
+          labels:
+            severity: warning
+          annotations:
+            summary: More than 30% of authorizations are being declined
+        - alert: ServiceErrors
+          expr: sum by (application) (rate(http_server_requests_seconds_count{status=~"5.."}[5m])) > 0.1
+          for: 5m
+          labels:
+            severity: critical
+          annotations:
+            summary: "{{ $labels.application }} is returning 5xx errors"
+        - alert: PodCrashLooping
+          expr: increase(kube_pod_container_status_restarts_total{namespace="pgs"}[15m]) > 3
+          labels:
+            severity: critical
+          annotations:
+            summary: "{{ $labels.pod }} restarted more than 3 times in 15 minutes"

@@ -1,0 +1,15 @@
+# Tells Prometheus to scrape /actuator/prometheus on every backend Service in the pgs namespace.
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: payment-gateway
+spec:
+  namespaceSelector:
+    matchNames: ["pgs"]
+  selector:
+    matchLabels:
+      app.kubernetes.io/component: backend
+  endpoints:
+    - port: http
+      path: /actuator/prometheus
+      interval: 15s

@@ -1,0 +1,34 @@
+# Local development overlay (kind). Images are built locally and loaded into the
+# cluster with `kind load`, so they're never pulled from a registry.
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+namespace: pgs
+
+resources:
+  - namespace.yaml
+  - ../../base
+
+# DEV-ONLY credentials, committed on purpose so the project runs out of the box.
+# In a real environment these come from a secrets manager (e.g. External Secrets Operator
+# or Sealed Secrets), never from git. The generated names get a content hash, so changing
+# a value automatically rolls the Deployments that use it.
+secretGenerator:
+  - name: pgs-db
+    envs:
+      - secrets/db.properties
+  - name: pgs-vault
+    envs:
+      - secrets/vault.properties
+
+images:
+  - name: pgs/merchant-service
+    newTag: local
+  - name: pgs/payment-service
+    newTag: local
+  - name: pgs/tokenization-service
+    newTag: local
+  - name: pgs/settlement-service
+    newTag: local
+  - name: pgs/merchant-dashboard
+    newTag: local

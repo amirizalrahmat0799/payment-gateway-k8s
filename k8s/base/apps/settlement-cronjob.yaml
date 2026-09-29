@@ -1,0 +1,63 @@
+# Nightly settlement as a Kubernetes CronJob (the in-app @Scheduled trigger is disabled with SETTLEMENT_CRON="-").
+# Settling the same date twice returns 409, so a retried Job can't double-pay a merchant.
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: settlement-nightly
+  labels:
+    app.kubernetes.io/name: settlement-nightly
+spec:
+  schedule: "5 0 * * *"             # 00:05 every day
+  timeZone: Etc/UTC
+  concurrencyPolicy: Forbid          # never run two settlements at once
+  startingDeadlineSeconds: 3600
+  successfulJobsHistoryLimit: 3
+  failedJobsHistoryLimit: 3
+  jobTemplate:
+    spec:
+      backoffLimit: 3
+      activeDeadlineSeconds: 600
+      ttlSecondsAfterFinished: 86400
+      template:
+        metadata:
+          labels:
+            app.kubernetes.io/name: settlement-nightly
+        spec:
+          restartPolicy: Never
+          automountServiceAccountToken: false
+          securityContext:
+            runAsNonRoot: true
+            runAsUser: 100
+            seccompProfile:
+              type: RuntimeDefault
+          containers:
+            - name: run-settlement
+              image: curlimages/curl:8.12.1
+              command: ["/bin/sh", "-c"]
+              args:
+                - |
+                  set -eu
+                  YESTERDAY=$(date -u -d "@$(( $(date +%s) - 86400 ))" +%F)
+                  echo "Settling ${YESTERDAY}"
+                  STATUS=$(curl -sS -o /tmp/body -w '%{http_code}' -X POST \
+                    "http://settlement-service:8084/api/v1/settlements/run?date=${YESTERDAY}")
+                  cat /tmp/body; echo
+                  # 200 = settled now, 409 = already settled (a retry): both are success.
+                  [ "$STATUS" = "200" ] || [ "$STATUS" = "409" ]
+              resources:
+                requests:
+                  cpu: 10m
+                  memory: 16Mi
+                limits:
+                  memory: 32Mi
+              securityContext:
+                allowPrivilegeEscalation: false
+                readOnlyRootFilesystem: true
+                capabilities:
+                  drop: ["ALL"]
+              volumeMounts:
+                - name: tmp
+                  mountPath: /tmp
+          volumes:
+            - name: tmp
+              emptyDir: {}

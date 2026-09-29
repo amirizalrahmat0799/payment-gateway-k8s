@@ -1,0 +1,33 @@
+# Values for the prometheus-community/kube-prometheus-stack Helm chart (Prometheus, Grafana,
+# kube-state-metrics, node-exporter), trimmed down for a laptop cluster.
+alertmanager:
+  enabled: false
+
+prometheus:
+  prometheusSpec:
+    retention: 2d
+    # Pick up ServiceMonitors / PrometheusRules from any namespace, not only ones labelled for this release.
+    serviceMonitorSelectorNilUsesHelmValues: false
+    ruleSelectorNilUsesHelmValues: false
+    resources:
+      requests:
+        cpu: 100m
+        memory: 400Mi
+
+grafana:
+  adminPassword: admin          # local cluster only
+  defaultDashboardsTimezone: browser
+  sidecar:
+    dashboards:
+      enabled: true
+      label: grafana_dashboard
+      searchNamespace: monitoring
+
+kubeEtcd:
+  enabled: false
+kubeControllerManager:
+  enabled: false
+kubeScheduler:
+  enabled: false
+kubeProxy:
+  enabled: false

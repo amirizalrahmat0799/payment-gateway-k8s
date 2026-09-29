@@ -1,0 +1,30 @@
+# Caps what the whole namespace can consume, so a runaway autoscaler can't starve the cluster.
+apiVersion: v1
+kind: ResourceQuota
+metadata:
+  name: pgs-quota
+spec:
+  hard:
+    requests.cpu: "3"
+    requests.memory: 6Gi
+    limits.memory: 10Gi
+    pods: "25"
+    persistentvolumeclaims: "4"
+    services.loadbalancers: "0"
+---
+# Defaults for any container that forgets to declare resources (a ResourceQuota on
+# memory makes requests/limits mandatory, so this keeps ad-hoc debug pods schedulable).
+apiVersion: v1
+kind: LimitRange
+metadata:
+  name: pgs-defaults
+spec:
+  limits:
+    - type: Container
+      defaultRequest:
+        cpu: 50m
+        memory: 64Mi
+      default:
+        memory: 256Mi
+      max:
+        memory: 2Gi

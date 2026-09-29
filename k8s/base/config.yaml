@@ -1,0 +1,9 @@
+# Non-secret configuration shared by the backend services.
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: pgs-config
+data:
+  KAFKA_BOOTSTRAP_SERVERS: kafka:9092
+  # Exit (and let Kubernetes restart the pod) instead of limping on after an OutOfMemoryError.
+  JAVA_TOOL_OPTIONS: "-XX:+ExitOnOutOfMemoryError"

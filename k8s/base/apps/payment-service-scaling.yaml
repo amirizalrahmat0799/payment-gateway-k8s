@@ -1,0 +1,34 @@
+# payment-service is stateless and safe to scale out: the outbox relay uses
+# SELECT ... FOR UPDATE SKIP LOCKED, so several replicas never publish the same event twice.
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: payment-service
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: payment-service
+  minReplicas: 2
+  maxReplicas: 5
+  metrics:
+    - type: Resource
+      resource:
+        name: cpu
+        target:
+          type: Utilization
+          averageUtilization: 70   # percent of the CPU *request* (100m)
+  behavior:
+    scaleDown:
+      stabilizationWindowSeconds: 120   # avoid flapping after a burst
+---
+# Keep at least one payment pod running during voluntary disruptions (node drains, cluster upgrades).
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: payment-service
+spec:
+  minAvailable: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: payment-service

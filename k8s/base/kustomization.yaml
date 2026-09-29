@@ -1,0 +1,23 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+# Labels added to every resource (not to selectors, which are immutable after creation).
+labels:
+  - pairs:
+      app.kubernetes.io/part-of: payment-gateway
+    includeSelectors: false
+
+resources:
+  - platform/quota.yaml
+  - platform/network-policies.yaml
+  - config.yaml
+  - data/postgres.yaml
+  - data/kafka.yaml
+  - apps/merchant-service.yaml
+  - apps/tokenization-service.yaml
+  - apps/payment-service.yaml
+  - apps/payment-service-scaling.yaml
+  - apps/settlement-service.yaml
+  - apps/settlement-cronjob.yaml
+  - apps/merchant-dashboard.yaml
+  - ingress.yaml

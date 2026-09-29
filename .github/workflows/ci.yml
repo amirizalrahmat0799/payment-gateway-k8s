@@ -1,0 +1,63 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install kubeconform
+        run: |
+          curl -sSL https://github.com/yannh/kubeconform/releases/latest/download/kubeconform-linux-amd64.tar.gz | tar xz
+          sudo mv kubeconform /usr/local/bin/
+      - name: Validate dev overlay
+        run: kubectl kustomize k8s/overlays/dev | kubeconform -strict -summary -kubernetes-version 1.33.0
+      - name: Validate monitoring resources
+        run: |
+          kubectl kustomize k8s/monitoring | kubeconform -strict -summary \
+            -schema-location default \
+            -schema-location 'https://raw.githubusercontent.com/datreeio/CRDs-catalog/main/{{.Group}}/{{.ResourceKind}}_{{.ResourceAPIVersion}}.json'
+      - name: Lint shell scripts
+        run: shellcheck -x scripts/*.sh
+
+  e2e:
+    needs: validate
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    env:
+      GATEWAY_DIR: ${{ github.workspace }}/apps/payment-gateway-sim
+      DASHBOARD_DIR: ${{ github.workspace }}/apps/merchant-dashboard
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/checkout@v4
+        with:
+          repository: amirizalrahmat0799/payment-gateway-sim
+          path: apps/payment-gateway-sim
+      - uses: actions/checkout@v4
+        with:
+          repository: amirizalrahmat0799/merchant-dashboard
+          path: apps/merchant-dashboard
+      - uses: helm/kind-action@v1
+        with:
+          cluster_name: pgs
+          config: kind/cluster.yaml
+      - run: scripts/cluster-up.sh
+      - run: scripts/build-images.sh
+      - run: scripts/deploy.sh
+      - run: scripts/smoke-test.sh
+      - name: Diagnostics
+        if: failure()
+        run: |
+          kubectl -n pgs get all,events --sort-by=.lastTimestamp || true
+          kubectl -n pgs describe pods || true
+          for d in merchant-service tokenization-service payment-service settlement-service merchant-dashboard; do
+            echo "::group::logs $d"; kubectl -n pgs logs deploy/$d --all-containers --tail=200 || true; echo "::endgroup::"
+          done

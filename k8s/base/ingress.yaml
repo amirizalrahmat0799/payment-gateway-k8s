@@ -1,0 +1,19 @@
+# Single entry point: the dashboard, which proxies API calls to the backend Services.
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: payment-gateway
+  annotations:
+    nginx.ingress.kubernetes.io/proxy-body-size: 1m
+spec:
+  ingressClassName: nginx
+  rules:
+    - http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: merchant-dashboard
+                port:
+                  name: http
