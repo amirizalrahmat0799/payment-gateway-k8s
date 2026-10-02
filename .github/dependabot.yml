@@ -1,0 +1,18 @@
+# Weekly dependency updates, grouped into one PR per ecosystem so CI checks them together.
+# Major upgrades (e.g. Spring Boot 4, a new Node or Java base image) are ignored here and done deliberately by hand.
+version: 2
+updates:
+  - package-ecosystem: github-actions
+    directory: "/"
+    schedule:
+      interval: weekly
+      day: monday
+      time: "08:00"
+      timezone: Asia/Kuala_Lumpur
+    open-pull-requests-limit: 5
+    commit-message:
+      prefix: "ci"
+      include: scope
+    groups:
+      github-actions:
+        patterns: ["*"]
