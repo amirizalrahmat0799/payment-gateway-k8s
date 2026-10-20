@@ -1,6 +1,6 @@
 # Payment Gateway on Kubernetes
 
-![CI](https://github.com/amirizalrahmat0799/payment-gateway-k8s/actions/workflows/ci.yml/badge.svg)
+[![CI](https://github.com/amirizalrahmat0799/payment-gateway-k8s/actions/workflows/ci.yml/badge.svg)](https://github.com/amirizalrahmat0799/payment-gateway-k8s/actions/workflows/ci.yml)
 ![Kubernetes](https://img.shields.io/badge/Kubernetes-1.33-326ce5)
 ![Kustomize](https://img.shields.io/badge/Kustomize-plain_YAML-326ce5)
 
